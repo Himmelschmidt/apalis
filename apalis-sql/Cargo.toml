@@ -28,5 +28,10 @@ default = ["chrono"]
 chrono = ["dep:chrono"]
 time = ["dep:time"]
 
+[package.metadata.cargo-udeps.ignore]
+# When both chrono and time features are enabled, time takes precedence
+# so chrono appears unused. This is expected behavior for --all-features.
+normal = ["chrono"]
+
 [lints]
 workspace = true
