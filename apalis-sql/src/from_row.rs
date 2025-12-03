@@ -3,29 +3,29 @@ use std::str::FromStr;
 use apalis_core::{
     backend::codec::Codec,
     error::BoxDynError,
-    task::{attempt::Attempt, builder::TaskBuilder, status::Status, task_id::TaskId, Task},
+    task::{Task, attempt::Attempt, builder::TaskBuilder, status::Status, task_id::TaskId},
 };
 
-#[cfg(feature = "chrono")]
+#[cfg(all(feature = "chrono", not(feature = "time")))]
 use chrono::{DateTime, Utc};
 
-#[cfg(all(feature = "time", not(feature = "chrono")))]
+#[cfg(feature = "time")]
 use time::OffsetDateTime;
 
 use crate::context::SqlContext;
 
 /// DateTime type alias that uses either chrono or time depending on enabled features.
 ///
-/// When the `chrono` feature is enabled, this is `chrono::DateTime<Utc>`.
-/// When the `time` feature is enabled (and `chrono` is not), this is `time::OffsetDateTime`.
-#[cfg(feature = "chrono")]
+/// When the `time` feature is enabled, this is `time::OffsetDateTime`.
+/// When the `chrono` feature is enabled (and `time` is not), this is `chrono::DateTime<Utc>`.
+#[cfg(all(feature = "chrono", not(feature = "time")))]
 pub type SqlDateTime = DateTime<Utc>;
 
 /// DateTime type alias that uses either chrono or time depending on enabled features.
 ///
-/// When the `chrono` feature is enabled, this is `chrono::DateTime<Utc>`.
-/// When the `time` feature is enabled (and `chrono` is not), this is `time::OffsetDateTime`.
-#[cfg(all(feature = "time", not(feature = "chrono")))]
+/// When the `time` feature is enabled, this is `time::OffsetDateTime`.
+/// When the `chrono` feature is enabled (and `time` is not), this is `chrono::DateTime<Utc>`.
+#[cfg(feature = "time")]
 pub type SqlDateTime = OffsetDateTime;
 
 /// Helper trait for getting unix timestamp from datetime types
@@ -34,14 +34,14 @@ pub trait ToUnixTimestamp {
     fn to_unix_timestamp(&self) -> i64;
 }
 
-#[cfg(feature = "chrono")]
+#[cfg(all(feature = "chrono", not(feature = "time")))]
 impl ToUnixTimestamp for DateTime<Utc> {
     fn to_unix_timestamp(&self) -> i64 {
         self.timestamp()
     }
 }
 
-#[cfg(all(feature = "time", not(feature = "chrono")))]
+#[cfg(feature = "time")]
 impl ToUnixTimestamp for OffsetDateTime {
     fn to_unix_timestamp(&self) -> i64 {
         self.unix_timestamp()
