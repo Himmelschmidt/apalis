@@ -9,7 +9,7 @@ use apalis_core::{
 #[cfg(feature = "chrono")]
 use chrono::{DateTime, Utc};
 
-#[cfg(feature = "time")]
+#[cfg(all(feature = "time", not(feature = "chrono")))]
 use time::OffsetDateTime;
 
 use crate::context::SqlContext;
@@ -17,15 +17,15 @@ use crate::context::SqlContext;
 /// DateTime type alias that uses either chrono or time depending on enabled features.
 ///
 /// When the `chrono` feature is enabled, this is `chrono::DateTime<Utc>`.
-/// When the `time` feature is enabled, this is `time::OffsetDateTime`.
+/// When the `time` feature is enabled (and `chrono` is not), this is `time::OffsetDateTime`.
 #[cfg(feature = "chrono")]
 pub type SqlDateTime = DateTime<Utc>;
 
 /// DateTime type alias that uses either chrono or time depending on enabled features.
 ///
 /// When the `chrono` feature is enabled, this is `chrono::DateTime<Utc>`.
-/// When the `time` feature is enabled, this is `time::OffsetDateTime`.
-#[cfg(feature = "time")]
+/// When the `time` feature is enabled (and `chrono` is not), this is `time::OffsetDateTime`.
+#[cfg(all(feature = "time", not(feature = "chrono")))]
 pub type SqlDateTime = OffsetDateTime;
 
 /// Helper trait for getting unix timestamp from datetime types
@@ -40,7 +40,7 @@ impl ToUnixTimestamp for DateTime<Utc> {
     }
 }
 
-#[cfg(feature = "time")]
+#[cfg(all(feature = "time", not(feature = "chrono")))]
 impl ToUnixTimestamp for OffsetDateTime {
     fn to_unix_timestamp(&self) -> i64 {
         self.unix_timestamp()
