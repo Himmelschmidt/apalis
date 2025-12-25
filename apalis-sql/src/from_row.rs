@@ -1,13 +1,41 @@
-use std::str::FromStr;
+use std::{fmt::Debug, str::FromStr};
 
 use apalis_core::{
     backend::codec::Codec,
     error::BoxDynError,
     task::{Task, attempt::Attempt, builder::TaskBuilder, status::Status, task_id::TaskId},
 };
-use chrono::{DateTime, Utc};
 
 use crate::context::SqlContext;
+
+/// A trait for timestamp types used in SQL backends.
+///
+/// This trait abstracts over different datetime libraries (e.g., `chrono`, `time`)
+/// allowing `apalis-sql` to remain agnostic about which library is used.
+/// Implementations should be provided by the specific SQL backend crates
+/// (e.g., `apalis-postgres`, `apalis-mysql`).
+///
+/// # Example
+///
+/// ```ignore
+/// // In apalis-postgres with chrono feature:
+/// impl SqlTimestamp for chrono::DateTime<chrono::Utc> {
+///     fn to_unix_timestamp(&self) -> i64 {
+///         self.timestamp()
+///     }
+/// }
+///
+/// // In apalis-postgres with time feature:
+/// impl SqlTimestamp for time::OffsetDateTime {
+///     fn to_unix_timestamp(&self) -> i64 {
+///         self.unix_timestamp()
+///     }
+/// }
+/// ```
+pub trait SqlTimestamp: Clone + Debug + Send + Sync + 'static {
+    /// Convert the timestamp to a Unix timestamp (seconds since epoch).
+    fn to_unix_timestamp(&self) -> i64;
+}
 
 /// Errors that can occur when converting a database row into a Task
 #[derive(Debug, thiserror::Error)]
@@ -21,13 +49,17 @@ pub enum FromRowError {
     DecodeError(#[from] BoxDynError),
 }
 
-#[derive(Debug)]
 /// Represents a row from the tasks table in the database.
 ///
 /// This struct contains all the fields necessary to represent a task/job
 /// stored in the SQL database, including its execution state, metadata,
 /// and scheduling information.
-pub struct TaskRow {
+///
+/// The type parameter `T` represents the timestamp type used by the database,
+/// which must implement [`SqlTimestamp`]. This allows different SQL backends
+/// to use their preferred datetime library (e.g., `chrono` or `time`).
+#[derive(Debug)]
+pub struct TaskRow<T: SqlTimestamp> {
     /// The serialized job data as bytes
     pub job: Vec<u8>,
     /// Unique identifier for the task
@@ -41,22 +73,22 @@ pub struct TaskRow {
     /// Maximum number of attempts allowed for this task before giving up
     pub max_attempts: Option<usize>,
     /// When the task should be executed (for scheduled tasks)
-    pub run_at: Option<DateTime<Utc>>,
+    pub run_at: Option<T>,
     /// The result of the last execution attempt, stored as JSON
     pub last_result: Option<serde_json::Value>,
     /// Timestamp when the task was locked for execution
-    pub lock_at: Option<DateTime<Utc>>,
+    pub lock_at: Option<T>,
     /// Identifier of the worker/process that has locked this task
     pub lock_by: Option<String>,
     /// Timestamp when the task was completed
-    pub done_at: Option<DateTime<Utc>>,
+    pub done_at: Option<T>,
     /// Priority level of the task (higher values indicate higher priority)
     pub priority: Option<usize>,
     /// Additional metadata associated with the task, stored as JSON
     pub metadata: Option<serde_json::Value>,
 }
 
-impl TaskRow {
+impl<T: SqlTimestamp> TaskRow<T> {
     /// Convert the TaskRow into a Task with decoded arguments
     pub fn try_into_task<D, Args, IdType>(
         self,
@@ -69,7 +101,7 @@ impl TaskRow {
         Args: 'static,
     {
         let ctx = SqlContext::default()
-            .with_done_at(self.done_at.map(|dt| dt.timestamp()))
+            .with_done_at(self.done_at.map(|dt| dt.to_unix_timestamp()))
             .with_lock_by(self.lock_by)
             .with_max_attempts(self.max_attempts.unwrap_or(25) as i32)
             .with_last_result(self.last_result)
@@ -86,7 +118,7 @@ impl TaskRow {
                     .unwrap_or_default(),
             )
             .with_queue(self.job_type)
-            .with_lock_at(self.lock_at.map(|dt| dt.timestamp()));
+            .with_lock_at(self.lock_at.map(|dt| dt.to_unix_timestamp()));
 
         let args = D::decode(&self.job).map_err(|e| FromRowError::DecodeError(e.into()))?;
         let task = TaskBuilder::new(args)
@@ -101,7 +133,7 @@ impl TaskRow {
             .run_at_timestamp(
                 self.run_at
                     .ok_or(FromRowError::ColumnNotFound("run_at".to_owned()))?
-                    .timestamp() as u64,
+                    .to_unix_timestamp() as u64,
             );
         Ok(task.build())
     }
@@ -115,7 +147,7 @@ impl TaskRow {
         <IdType as FromStr>::Err: std::error::Error + Send + Sync + 'static,
     {
         let ctx = SqlContext::default()
-            .with_done_at(self.done_at.map(|dt| dt.timestamp()))
+            .with_done_at(self.done_at.map(|dt| dt.to_unix_timestamp()))
             .with_lock_by(self.lock_by)
             .with_max_attempts(self.max_attempts.unwrap_or(25) as i32)
             .with_last_result(self.last_result)
@@ -126,7 +158,7 @@ impl TaskRow {
                     .unwrap_or_default(),
             )
             .with_queue(self.job_type)
-            .with_lock_at(self.lock_at.map(|dt| dt.timestamp()));
+            .with_lock_at(self.lock_at.map(|dt| dt.to_unix_timestamp()));
 
         let task = TaskBuilder::new(self.job)
             .with_ctx(ctx)
@@ -140,7 +172,7 @@ impl TaskRow {
             .run_at_timestamp(
                 self.run_at
                     .ok_or(FromRowError::ColumnNotFound("run_at".to_owned()))?
-                    .timestamp() as u64,
+                    .to_unix_timestamp() as u64,
             );
         Ok(task.build())
     }
