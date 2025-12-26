@@ -38,6 +38,9 @@ pub trait SqlDateTimeExt {
 
     /// Returns the Unix timestamp (seconds since epoch).
     fn to_unix_timestamp(&self) -> i64;
+
+    /// Creates a datetime from Unix timestamp (seconds since epoch).
+    fn from_unix_timestamp(secs: i64) -> Self;
 }
 
 #[cfg(all(feature = "chrono", not(feature = "time")))]
@@ -49,6 +52,10 @@ impl SqlDateTimeExt for DateTime<Utc> {
     fn to_unix_timestamp(&self) -> i64 {
         self.timestamp()
     }
+
+    fn from_unix_timestamp(secs: i64) -> Self {
+        DateTime::from_timestamp(secs, 0).unwrap_or_default()
+    }
 }
 
 #[cfg(feature = "time")]
@@ -59,6 +66,10 @@ impl SqlDateTimeExt for OffsetDateTime {
 
     fn to_unix_timestamp(&self) -> i64 {
         self.unix_timestamp()
+    }
+
+    fn from_unix_timestamp(secs: i64) -> Self {
+        OffsetDateTime::from_unix_timestamp(secs).unwrap_or(OffsetDateTime::UNIX_EPOCH)
     }
 }
 
