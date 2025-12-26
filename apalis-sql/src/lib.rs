@@ -11,6 +11,8 @@ pub mod from_row;
 /// Extension traits for `TaskBuilder`
 pub mod ext;
 
+pub use from_row::{SqlDateTime, SqlDateTimeExt, TaskRow};
+
 /// Convert a string to a StatType
 #[must_use]
 pub fn stat_type_from_string(s: &str) -> StatType {
