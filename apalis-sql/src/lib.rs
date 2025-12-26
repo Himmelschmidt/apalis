@@ -7,11 +7,14 @@ pub mod config;
 pub mod context;
 /// SQL task row representation and conversion
 pub mod from_row;
+/// SQL datetime abstraction for unified datetime handling
+pub mod sql_datetime;
 
 /// Extension traits for `TaskBuilder`
 pub mod ext;
 
-pub use from_row::{SqlDateTime, SqlDateTimeExt, TaskRow};
+pub use from_row::TaskRow;
+pub use sql_datetime::{SqlDateTime, SqlDateTimeExt};
 
 /// Convert a string to a StatType
 #[must_use]

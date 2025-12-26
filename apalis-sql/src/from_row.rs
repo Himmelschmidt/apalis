@@ -6,72 +6,8 @@ use apalis_core::{
     task::{Task, attempt::Attempt, builder::TaskBuilder, status::Status, task_id::TaskId},
 };
 
-#[cfg(all(feature = "chrono", not(feature = "time")))]
-use chrono::{DateTime, Utc};
-
-#[cfg(feature = "time")]
-use time::OffsetDateTime;
-
 use crate::context::SqlContext;
-
-/// DateTime type alias that uses either chrono or time depending on enabled features.
-///
-/// When the `time` feature is enabled, this is `time::OffsetDateTime`.
-/// When the `chrono` feature is enabled (and `time` is not), this is `chrono::DateTime<Utc>`.
-#[cfg(all(feature = "chrono", not(feature = "time")))]
-pub type SqlDateTime = DateTime<Utc>;
-
-/// DateTime type alias that uses either chrono or time depending on enabled features.
-///
-/// When the `time` feature is enabled, this is `time::OffsetDateTime`.
-/// When the `chrono` feature is enabled (and `time` is not), this is `chrono::DateTime<Utc>`.
-#[cfg(feature = "time")]
-pub type SqlDateTime = OffsetDateTime;
-
-/// Extension trait for SQL datetime operations.
-///
-/// This trait provides a unified API for datetime operations regardless of
-/// whether `chrono` or `time` feature is enabled.
-pub trait SqlDateTimeExt {
-    /// Returns the current UTC datetime.
-    fn now() -> Self;
-
-    /// Returns the Unix timestamp (seconds since epoch).
-    fn to_unix_timestamp(&self) -> i64;
-
-    /// Creates a datetime from Unix timestamp (seconds since epoch).
-    fn from_unix_timestamp(secs: i64) -> Self;
-}
-
-#[cfg(all(feature = "chrono", not(feature = "time")))]
-impl SqlDateTimeExt for DateTime<Utc> {
-    fn now() -> Self {
-        Utc::now()
-    }
-
-    fn to_unix_timestamp(&self) -> i64 {
-        self.timestamp()
-    }
-
-    fn from_unix_timestamp(secs: i64) -> Self {
-        DateTime::from_timestamp(secs, 0).unwrap_or_default()
-    }
-}
-
-#[cfg(feature = "time")]
-impl SqlDateTimeExt for OffsetDateTime {
-    fn now() -> Self {
-        OffsetDateTime::now_utc()
-    }
-
-    fn to_unix_timestamp(&self) -> i64 {
-        self.unix_timestamp()
-    }
-
-    fn from_unix_timestamp(secs: i64) -> Self {
-        OffsetDateTime::from_unix_timestamp(secs).unwrap_or(OffsetDateTime::UNIX_EPOCH)
-    }
-}
+use crate::sql_datetime::{SqlDateTime, SqlDateTimeExt};
 
 /// Errors that can occur when converting a database row into a Task
 #[derive(Debug, thiserror::Error)]
