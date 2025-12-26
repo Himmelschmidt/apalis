@@ -28,21 +28,35 @@ pub type SqlDateTime = DateTime<Utc>;
 #[cfg(feature = "time")]
 pub type SqlDateTime = OffsetDateTime;
 
-/// Helper trait for getting unix timestamp from datetime types
-pub trait ToUnixTimestamp {
-    /// Returns the Unix timestamp
+/// Extension trait for SQL datetime operations.
+///
+/// This trait provides a unified API for datetime operations regardless of
+/// whether `chrono` or `time` feature is enabled.
+pub trait SqlDateTimeExt {
+    /// Returns the current UTC datetime.
+    fn now() -> Self;
+
+    /// Returns the Unix timestamp (seconds since epoch).
     fn to_unix_timestamp(&self) -> i64;
 }
 
 #[cfg(all(feature = "chrono", not(feature = "time")))]
-impl ToUnixTimestamp for DateTime<Utc> {
+impl SqlDateTimeExt for DateTime<Utc> {
+    fn now() -> Self {
+        Utc::now()
+    }
+
     fn to_unix_timestamp(&self) -> i64 {
         self.timestamp()
     }
 }
 
 #[cfg(feature = "time")]
-impl ToUnixTimestamp for OffsetDateTime {
+impl SqlDateTimeExt for OffsetDateTime {
+    fn now() -> Self {
+        OffsetDateTime::now_utc()
+    }
+
     fn to_unix_timestamp(&self) -> i64 {
         self.unix_timestamp()
     }
