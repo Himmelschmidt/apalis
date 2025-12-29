@@ -1,4 +1,4 @@
-//! SQL DateTime abstraction for unified datetime handling.
+//! DateTime abstraction for unified time handling.
 //!
 //! This module provides a unified API for datetime operations in the SQL backends,
 //! abstracting over the differences between the `chrono` and `time` crates.
@@ -21,7 +21,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```rust
 //! use apalis_sql::{SqlDateTime, SqlDateTimeExt};
 //!
 //! // Get current time (works with either feature)
@@ -87,7 +87,7 @@ impl SqlDateTimeExt for DateTime<Utc> {
 #[cfg(feature = "time")]
 impl SqlDateTimeExt for OffsetDateTime {
     fn now() -> Self {
-        OffsetDateTime::now_utc()
+        Self::now_utc()
     }
 
     fn to_unix_timestamp(&self) -> i64 {
@@ -95,6 +95,6 @@ impl SqlDateTimeExt for OffsetDateTime {
     }
 
     fn from_unix_timestamp(secs: i64) -> Self {
-        OffsetDateTime::from_unix_timestamp(secs).unwrap_or(OffsetDateTime::UNIX_EPOCH)
+        Self::from_unix_timestamp(secs).unwrap_or(Self::UNIX_EPOCH)
     }
 }

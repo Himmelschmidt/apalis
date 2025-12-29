@@ -7,7 +7,7 @@ use apalis_core::{
 };
 
 use crate::context::SqlContext;
-use crate::sql_datetime::{SqlDateTime, SqlDateTimeExt};
+use crate::datetime::{SqlDateTime, SqlDateTimeExt};
 
 /// Errors that can occur when converting a database row into a Task
 #[derive(Debug, thiserror::Error)]
